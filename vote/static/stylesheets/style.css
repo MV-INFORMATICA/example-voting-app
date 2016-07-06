@@ -35,6 +35,10 @@ button.b{
   background-color: #00cbca;
 }
 
+button.c{
+  background-color: #254356;
+}
+
 #tip{
   text-align: left;
   color: #c0c9ce;
