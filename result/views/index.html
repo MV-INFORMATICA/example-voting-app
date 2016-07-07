@@ -2,7 +2,7 @@
 <html ng-app="catsvsdogs">
   <head>
     <meta charset="utf-8">
-    <title>Cats vs Dogs -- Result</title>
+    <title>Sugestões de almoço -- Resultado</title>
     <base href="/index.html">
     <meta name = "viewport" content = "width=device-width, initial-scale = 1.0">
     <meta name="keywords" content="docker-compose, docker, stack">
@@ -42,9 +42,9 @@
       </div>
     </div>
     <div id="result">
-      <span ng-if="total == 0">No votes yet</span>
-      <span ng-if="total == 1">{{total}} vote</span>
-      <span ng-if="total >= 2">{{total}} votes</span>
+      <span ng-if="total == 0">sem votos ainda</span>
+      <span ng-if="total == 1">{{total}} voto</span>
+      <span ng-if="total >= 2">{{total}} votos</span>
     </div>
     <script src="socket.io.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular.min.js"></script>
