@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, make_response, g
 from redis import Redis
+from random import choice
+from datetime import datetime
 import os
 import socket
 import random
@@ -11,6 +13,14 @@ option_c = os.getenv('OPTION_C', "Birds")
 hostname = socket.gethostname()
 
 app = Flask(__name__)
+
+def get_options():
+    choices = ["Alphaiate", "Shopping - Praca", "Boteco", "Maria Maria", "Pizzaria Atlantico", "Sushi-Tay San", "Sushi - Nirai", "Bar do Lula - Final da Imbiribeira","Michelli","Camarada","Bode", "Parraxaxa", "Dom ferreiro", "Emporio","Carcara","The Fifties","Saturdays", "So caldinho","Cangaco","Restaurante de Allan", "Galletus","Chica Pitanga"]
+
+    if datetime.today().weekday() == 4:
+        choices.append("Paranoia")
+
+    return choice(choices)
 
 def get_redis():
     if not hasattr(g, 'redis'):
@@ -37,7 +47,7 @@ def hello():
         redis = get_redis()
         vote = request.form['vote']
         voted_option = get_voted_option(vote) 
-        data = json.dumps({'voter_id': voter_id, 'vote': vote})
+        data = json.dumps({'voter_id': voter_id, 'vote': vote, 'vote_date': datetime.today().strftime("%d/%m/%Y")})
         redis.rpush('votes', data)
 
     resp = make_response(render_template(

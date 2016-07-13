@@ -19,15 +19,17 @@ namespace Worker
                 var pgsql = OpenDbConnection("Server=db;Username=postgres;");
                 var redis = OpenRedisConnection("redis").GetDatabase();
 
-                var definition = new { vote = "", voter_id = "" };
+                CreateOptions(redis);
+
+                var definition = new { vote = "", voter_id = "" , vote_date = ""};
                 while (true)
                 {
                     string json = redis.ListLeftPopAsync("votes").Result;
                     if (json != null)
                     {
                         var vote = JsonConvert.DeserializeAnonymousType(json, definition);
-                        Console.WriteLine($"Processing vote for '{vote.vote}' by '{vote.voter_id}'");
-                        UpdateVote(pgsql, vote.voter_id, vote.vote);
+                        Console.WriteLine($"Processing vote for '{vote.vote}' by '{vote.voter_id}' at '{vote.vote_date}'");
+                        UpdateVote(pgsql, vote.voter_id, vote.vote_date, vote.vote);
                     }
                 }
             }
@@ -36,6 +38,14 @@ namespace Worker
                 Console.Error.WriteLine(ex.ToString());
                 return 1;
             }
+        }
+
+        private static void CreateOptions(IDatabase db)
+        {
+            db.KeyDelete("options");
+            db.ListRightPush("options", "camarada");
+            db.ListRightPush("options", "outback");
+            db.ListRightPush("options", "alphaiate");
         }
 
         private static NpgsqlConnection OpenDbConnection(string connectionString)
@@ -67,6 +77,7 @@ namespace Worker
             var command = connection.CreateCommand();
             command.CommandText = @"CREATE TABLE IF NOT EXISTS votes (
                                         id VARCHAR(255) NOT NULL UNIQUE, 
+                                        date DATE NOT NULL,
                                         vote VARCHAR(255) NOT NULL
                                     )";
             command.ExecuteNonQuery();
@@ -102,19 +113,20 @@ namespace Worker
                 .First(a => a.AddressFamily == AddressFamily.InterNetwork)
                 .ToString();
 
-        private static void UpdateVote(NpgsqlConnection connection, string voterId, string vote)
+        private static void UpdateVote(NpgsqlConnection connection, string voterId, string voteDate, string vote)
         {
             var command = connection.CreateCommand();
             try
             {
-                command.CommandText = "INSERT INTO votes (id, vote) VALUES (@id, @vote)";
+                command.CommandText = "INSERT INTO votes (id, date, vote) VALUES (@id, to_date(@date,'DD/MM/YYYY'), @vote)";
                 command.Parameters.AddWithValue("@id", voterId);
+                command.Parameters.AddWithValue("@date", voteDate);
                 command.Parameters.AddWithValue("@vote", vote);
                 command.ExecuteNonQuery();
             }
             catch (DbException)
             {
-                command.CommandText = "UPDATE votes SET vote = @vote WHERE id = @id";
+                command.CommandText = "UPDATE votes SET vote = @vote WHERE id = @id and date = to_date(@date,'DD/MM/YYYY')";
                 command.ExecuteNonQuery();
             }
             finally
