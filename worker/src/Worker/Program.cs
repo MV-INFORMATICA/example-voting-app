@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Net;
@@ -19,7 +21,7 @@ namespace Worker
                 var pgsql = OpenDbConnection("Server=db;Username=postgres;");
                 var redis = OpenRedisConnection("redis").GetDatabase();
 
-                CreateOptions(redis);
+                CreateOptions(pgsql, redis);
 
                 var definition = new { vote = "", voter_id = "" , vote_date = ""};
                 while (true)
@@ -40,12 +42,24 @@ namespace Worker
             }
         }
 
-        private static void CreateOptions(IDatabase db)
+        private static void CreateOptions(NpgsqlConnection pgsql, IDatabase redis)
         {
-            db.KeyDelete("options");
-            db.ListRightPush("options", "camarada");
-            db.ListRightPush("options", "outback");
-            db.ListRightPush("options", "alphaiate");
+            NpgsqlDataReader dr = RunCommandQuery(pgsql, "SELECT name FROM options");
+
+            List<string> options = new List<string>();
+            while(dr.Read())
+            {
+                Console.WriteLine("Record: "+dr[0].ToString());
+
+                options.Add(dr.GetString(0));
+            }
+
+            Console.WriteLine("Array: "+ String.Join(", ", options.ToArray()));
+
+            redis.KeyDelete("options");
+            redis.ListRightPush("options", "camarada");
+            redis.ListRightPush("options", "outback");
+            redis.ListRightPush("options", "alphaiate");
         }
 
         private static NpgsqlConnection OpenDbConnection(string connectionString)
@@ -74,15 +88,55 @@ namespace Worker
 
             Console.Error.WriteLine("Connected to db");
 
-            var command = connection.CreateCommand();
-            command.CommandText = @"CREATE TABLE IF NOT EXISTS votes (
+            CreateTableVotes(connection);
+            CreateTableOptions(connection);
+
+
+            return connection;
+        }
+
+        private static void CreateTableVotes(NpgsqlConnection connection)
+        {
+            RunCommandNoQuery(connection, @"CREATE TABLE IF NOT EXISTS votes (
                                         id VARCHAR(255) NOT NULL UNIQUE, 
                                         date DATE NOT NULL,
                                         vote VARCHAR(255) NOT NULL
-                                    )";
-            command.ExecuteNonQuery();
+                                    )");
 
-            return connection;
+        }
+        
+        private static void CreateTableOptions(NpgsqlConnection connection)
+        {
+            try {
+                RunCommandNoQuery(connection, "SELECT * FROM options where 1 = 0");
+            }
+            catch(DbException)
+            {
+                RunCommandNoQuery(connection, @"CREATE TABLE IF NOT EXISTS options (
+                                            id SERIAL PRIMARY KEY,
+                                            name VARCHAR(255) NOT NULL
+                                        )");
+
+                string[] options = File.ReadAllLines("options.txt");
+                foreach (string s in options)
+                {
+                    RunCommandNoQuery(connection, String.Format("INSERT INTO options (name) values ('{0}')",s));
+                }
+            }
+        }
+
+        private static void RunCommandNoQuery(NpgsqlConnection connection, string CommandText)
+        {
+            var command = connection.CreateCommand();
+            command.CommandText = CommandText;
+            command.ExecuteNonQuery();
+        }
+
+        private static NpgsqlDataReader RunCommandQuery(NpgsqlConnection connection, string CommandText)
+        {
+            var command = connection.CreateCommand();
+            command.CommandText = CommandText;
+            return command.ExecuteReader();
         }
 
         private static ConnectionMultiplexer OpenRedisConnection(string hostname)
