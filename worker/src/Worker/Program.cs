@@ -45,22 +45,22 @@ namespace Worker
 
         private static void CreateOptions(NpgsqlConnection pgsql, IDatabase redis)
         {
-            NpgsqlDataReader dr = RunCommandQuery(pgsql, "SELECT id,name FROM options ORDER BY RANDOM() LIMIT 3");
-
-            redis.KeyDelete("options");
-
-            string[] ids = {"a","b","c"};
-            int count = 0;
-
-            while(dr.Read())
+            using(NpgsqlDataReader dr = RunCommandQuery(pgsql, "SELECT id,name FROM options ORDER BY RANDOM() LIMIT 3"))
             {
-                var option = new {id = ids[count++], name = dr.GetString(1)};
+                redis.KeyDelete("options");
 
-                Console.WriteLine("Json: " + JsonConvert.SerializeObject(option));
+                string[] ids = {"a","b","c"};
+                int count = 0;
 
-                redis.ListRightPush("options", JsonConvert.SerializeObject(option));
+                while(dr.Read())
+                {
+                    var option = new {id = ids[count++], name = dr.GetString(1)};
+
+                    Console.WriteLine("Json: " + JsonConvert.SerializeObject(option));
+
+                    redis.ListRightPush("options", JsonConvert.SerializeObject(option));
+                }
             }
-
         }
 
         private static NpgsqlConnection OpenDbConnection(string connectionString)
@@ -129,15 +129,30 @@ namespace Worker
         private static void RunCommandNoQuery(NpgsqlConnection connection, string CommandText)
         {
             var command = connection.CreateCommand();
-            command.CommandText = CommandText;
-            command.ExecuteNonQuery();
+            try 
+            {
+                command.CommandText = CommandText;
+                command.ExecuteNonQuery();
+            }
+            finally
+            {
+                command.Dispose();
+            }
         }
 
         private static NpgsqlDataReader RunCommandQuery(NpgsqlConnection connection, string CommandText)
         {
             var command = connection.CreateCommand();
-            command.CommandText = CommandText;
-            return command.ExecuteReader();
+
+            try 
+            {
+                command.CommandText = CommandText;
+                return command.ExecuteReader();
+            }
+            finally
+            {
+                command.Dispose();
+            }
         }
 
         private static ConnectionMultiplexer OpenRedisConnection(string hostname)
@@ -173,6 +188,7 @@ namespace Worker
             var command = connection.CreateCommand();
             try
             {
+                Console.WriteLine("executando INSERT");
                 command.CommandText = "INSERT INTO votes (id, date, vote) VALUES (@id, to_date(@date,'DD/MM/YYYY'), @vote)";
                 command.Parameters.AddWithValue("@id", voterId);
                 command.Parameters.AddWithValue("@date", voteDate);
@@ -181,6 +197,7 @@ namespace Worker
             }
             catch (DbException)
             {
+                Console.Error.WriteLine("NÃO POSSÍVEL REALIZAR INSERT | executando UPDATE");
                 command.CommandText = "UPDATE votes SET vote = @vote WHERE id = @id and date = to_date(@date,'DD/MM/YYYY')";
                 command.ExecuteNonQuery();
             }
