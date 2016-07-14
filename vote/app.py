@@ -7,9 +7,7 @@ import socket
 import random
 import json
 
-option_a = os.getenv('OPTION_A', "Cats")
-option_b = os.getenv('OPTION_B', "Dogs")
-option_c = os.getenv('OPTION_C', "Birds")
+options = []
 hostname = socket.gethostname()
 
 app = Flask(__name__)
@@ -20,23 +18,22 @@ def get_redis():
     return g.redis
 
 def get_options():
+    global options
+    options = []
     redis = get_redis()
     length = redis.llen('options')
     data = redis.lrange('options',0,length)
-    options = []
     for option in data:
         options.append(json.loads(option))
-
-    print options
 
     return options
 
 def get_voted_option(vote):
-    return {
-        'a': option_a,
-        'b': option_b,
-        'c': option_c,
-    }[vote]
+    options_map = {}
+    for opt in options:
+        options_map[opt['id']] = opt['name']
+
+    return options_map[vote]
 
 @app.route("/", methods=['POST','GET'])
 def hello():

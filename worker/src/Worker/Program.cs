@@ -49,12 +49,11 @@ namespace Worker
             {
                 redis.KeyDelete("options");
 
-                string[] ids = {"a","b","c"};
                 int count = 0;
 
                 while(dr.Read())
                 {
-                    var option = new {id = ids[count++], name = dr.GetString(1)};
+                    var option = new {id = Convert.ToChar(97 + count++), name = dr.GetString(1)};
 
                     Console.WriteLine("Json: " + JsonConvert.SerializeObject(option));
 
