@@ -90,6 +90,7 @@ body{
 
 #choice .choice .label{
   text-transform: uppercase;
+  font-size: x-large;
 }
 
 #choice .choice .votes{
@@ -98,17 +99,17 @@ body{
 
 #choice .choice.dogs{
   color: #00cbca;
-  float: left
+  float: left;
 }
 
 #choice .choice.cats{
   color: #2196f3;
-  float: left
+  float: left;
 }
 
 #choice .choice.birds{
   color: #254356;
-  float: left
+  float: left;
 }
 
 #background-stats{

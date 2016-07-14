@@ -47,10 +47,12 @@ app.controller('statsCtrl', function($scope){
 function getPercentages(a, b, c) {
   var result = {};
 
-  if (a + b + c > 0) {
-    result.a = Math.floor(a / (a + b + c) * 100);
-    result.b = Math.floor(b / (a + b + c) * 100);
-    result.c = 100 - result.a - result.b;
+  totalVotes = a + b + c
+
+  if (totalVotes > 0) {
+    result.a = (a / totalVotes * 100);
+    result.b = (b / totalVotes * 100);
+    result.c = (c / totalVotes * 100);
   } else {
     result.a = result.b = result.c = 100/3;
   }
