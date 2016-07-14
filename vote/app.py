@@ -14,18 +14,22 @@ hostname = socket.gethostname()
 
 app = Flask(__name__)
 
-def get_options():
-    choices = ["Alphaiate", "Shopping - Praca", "Boteco", "Maria Maria", "Pizzaria Atlantico", "Sushi-Tay San", "Sushi - Nirai", "Bar do Lula - Final da Imbiribeira","Michelli","Camarada","Bode", "Parraxaxa", "Dom ferreiro", "Emporio","Carcara","The Fifties","Saturdays", "So caldinho","Cangaco","Restaurante de Allan", "Galletus","Chica Pitanga"]
-
-    if datetime.today().weekday() == 4:
-        choices.append("Paranoia")
-
-    return choice(choices)
-
 def get_redis():
     if not hasattr(g, 'redis'):
         g.redis = Redis(host="redis", db=0, socket_timeout=5)
     return g.redis
+
+def get_options():
+    redis = get_redis()
+    length = redis.llen('options')
+    data = redis.lrange('options',0,length)
+    options = []
+    for option in data:
+        options.append(json.loads(option))
+
+    print options
+
+    return options
 
 def get_voted_option(vote):
     return {
@@ -52,9 +56,7 @@ def hello():
 
     resp = make_response(render_template(
         'index.html',
-        option_a=option_a,
-        option_b=option_b,
-        option_c=option_c,
+        options=get_options(),
         hostname=hostname,
         vote=vote,
         voted_option=voted_option,

@@ -15,9 +15,9 @@
       <div id="content-container-center">
         <h3>Sugestões de almoço!</h3>
         <form id="choice" name='form' method="POST" action="/">
-          <button id="a" type="submit" name="vote" class="a" value="a">{{option_a}}</button>
-          <button id="b" type="submit" name="vote" class="b" value="b">{{option_b}}</button>
-          <button id="c" type="submit" name="vote" class="c" value="c">{{option_c}}</button>
+          {% for option in options %}
+            <button id="{{option.id}}" type="submit" name="vote" class="{{option.id}}" value="{{option.id}}">{{option.name}}</button>
+          {% endfor %}
         </form>
         <div id="tip">
           (Tip: you can change your vote)

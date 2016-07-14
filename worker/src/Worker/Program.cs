@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Dynamic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -44,22 +45,22 @@ namespace Worker
 
         private static void CreateOptions(NpgsqlConnection pgsql, IDatabase redis)
         {
-            NpgsqlDataReader dr = RunCommandQuery(pgsql, "SELECT name FROM options");
-
-            List<string> options = new List<string>();
-            while(dr.Read())
-            {
-                Console.WriteLine("Record: "+dr[0].ToString());
-
-                options.Add(dr.GetString(0));
-            }
-
-            Console.WriteLine("Array: "+ String.Join(", ", options.ToArray()));
+            NpgsqlDataReader dr = RunCommandQuery(pgsql, "SELECT id,name FROM options ORDER BY RANDOM() LIMIT 3");
 
             redis.KeyDelete("options");
-            redis.ListRightPush("options", "camarada");
-            redis.ListRightPush("options", "outback");
-            redis.ListRightPush("options", "alphaiate");
+
+            string[] ids = {"a","b","c"};
+            int count = 0;
+
+            while(dr.Read())
+            {
+                var option = new {id = ids[count++], name = dr.GetString(1)};
+
+                Console.WriteLine("Json: " + JsonConvert.SerializeObject(option));
+
+                redis.ListRightPush("options", JsonConvert.SerializeObject(option));
+            }
+
         }
 
         private static NpgsqlConnection OpenDbConnection(string connectionString)
